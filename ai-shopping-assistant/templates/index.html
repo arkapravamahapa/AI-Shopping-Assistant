@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Shopping Assistant</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Inter font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* Custom style for the Inter font */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Style for rendered Markdown */
+        #recommendation-output h3, #comparison-output h3, #trend-output h3, #persona-output h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-top: 1.5rem;
+            color: #4f46e5; /* Indigo */
+        }
+        #recommendation-output p, #comparison-output p, #trend-output p, #persona-output p {
+            margin-bottom: 0.5rem;
+            color: #4b5563; /* Gray */
+        }
+        
+        /* Style for the persona list */
+        #persona-output ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        #persona-output li {
+            background-color: #f0f4ff; /* Lightest Blue */
+            border-left: 4px solid #4f46e5; /* Indigo */
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+
+        /* Specific styling for Markdown table in the comparison section */
+        #comparison-output table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        #comparison-output th {
+            background-color: #e0e7ff; /* Indigo-100 */
+            color: #3730a3; /* Indigo-700 */
+            padding: 0.75rem;
+            text-align: left;
+            font-weight: 700;
+        }
+        #comparison-output td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e5e7eb; /* Gray-200 */
+            background-color: #ffffff;
+            vertical-align: top;
+            word-break: break-word;
+        }
+        /* Style for the yellow trend box content */
+        #price-trend-card #trend-output h3 {
+            margin-top: 0;
+            color: #b45309; /* Amber-700 */
+            font-size: 1.25rem;
+        }
+        
+        /* Price Tracker styles (for markdown list) */
+        #price-tracker-output ul {
+            list-style: disc;
+            margin-left: 1.5rem;
+            padding-top: 0.5rem;
+        }
+        #price-tracker-output li {
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+    </style>
+    <!-- 
+        Library to convert Markdown to HTML 
+    -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body class="bg-gray-100 font-sans min-h-screen p-4 sm:p-8">
+
+    <div class="max-w-3xl mx-auto">
+
+        <!-- Header Section -->
+        <header class="text-center mb-10">
+            <h1 class="text-4xl sm:text-5xl font-extrabold text-gray-900 mb-2">
+                AI Shopping Assistant
+            </h1>
+            <p class="text-lg sm:text-xl text-gray-600">
+                Get fast, expert product recommendations (Live Search Enabled).
+            </p>
+        </header>
+
+        <!-- Form Section -->
+        <section class="bg-white p-6 sm:p-8 rounded-2xl shadow-lg border border-gray-200 mb-10">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">What are you looking for?</h2>
+            <form id="shop-form" class="grid grid-cols-1 gap-6">
+                
+                <!-- Shopping Query -->
+                <div class="col-span-1">
+                    <label for="shopping-query" class="block text-sm font-semibold text-gray-700 mb-2">Product Request</label>
+                    <input type="text" id="shopping-query" name="shopping_query" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" value="A smartwatch for a marathon runner" required>
+                </div>
+
+                <!-- Budget -->
+                <div class="col-span-1">
+                    <label for="budget" class="block text-sm font-semibold text-gray-700 mb-2">Budget</label>
+                    <select id="budget" name="budget" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+                        <option>Budget-Friendly</option>
+                        <option selected>Mid-Range</option>
+                        <option>Premium</option>
+                    </select>
+                </div>
+                
+                <!-- Submit Button -->
+                <div class="col-span-1">
+                    <button type="submit" id="generate-btn" class="w-full flex justify-center items-center gap-3 p-4 bg-indigo-600 text-white text-lg font-bold rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors duration-200 disabled:bg-gray-400">
+                        <!-- Spinner (hidden by default) -->
+                        <svg id="spinner" class="animate-spin h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span id="btn-text">Find Products (Fast Search)</span>
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Price Tracker Section -->
+        <section id="price-tracker-section" class="hidden">
+            <h2 class="text-3xl font-extrabold text-gray-900 mb-6">Lowest Price Tracker</h2>
+            <div id="price-tracker-output" class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200 mb-10">
+                <!-- Price comparison links injected here -->
+            </div>
+        </section>
+
+
+        <!-- Recommendations Section -->
+        <section id="recommendations-section" class="hidden">
+            <h2 class="text-3xl font-extrabold text-gray-900 mb-6">AI Recommendations</h2>
+            
+            <!-- Price Trend Analysis Card -->
+            <div id="price-trend-card" class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded-lg shadow-md hidden">
+                <div class="flex items-center">
+                    <svg class="h-6 w-6 text-yellow-500 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    <!-- Output for the Markdown Trend Summary goes here -->
+                    <div id="trend-output" class="flex-grow text-yellow-800"></div>
+                </div>
+            </div>
+            
+            <div id="recommendation-output" class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+                <!-- Content injected here -->
+            </div>
+        </section>
+        
+        <!-- Persona Section -->
+        <section id="persona-section" class="hidden mt-10">
+            <h2 class="text-3xl font-extrabold text-gray-900 mb-6">Product Persona Profile</h2>
+            <div id="persona-output" class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+                <!-- Persona list injected here -->
+            </div>
+        </section>
+        
+        <!-- Comparison Section -->
+        <section id="comparison-section" class="hidden mt-10">
+            <h2 class="text-3xl font-extrabold text-gray-900 mb-6">Side-by-Side Comparison</h2>
+            <div id="comparison-output" class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+                <!-- Comparison table injected here -->
+            </div>
+        </section>
+        
+        <!-- Q&A Interface -->
+        <section id="qna-section" class="hidden mt-10 bg-white p-6 sm:p-8 rounded-2xl shadow-xl border border-indigo-400 border-dashed">
+            <h2 class="text-2xl font-bold text-indigo-700 mb-4">Ask a Follow-Up Question</h2>
+            <p class="text-gray-600 mb-4">The AI has saved the recommendations above. Ask a specific question about them (e.g., "Which one has the best battery life?").</p>
+            
+            <form id="qna-form" class="flex flex-col sm:flex-row gap-3">
+                <input type="text" id="qna-query" class="flex-grow p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Type your question here..." required>
+                <button type="submit" id="qna-btn" class="flex-shrink-0 flex justify-center items-center gap-2 p-3 bg-indigo-500 text-white font-semibold rounded-lg hover:bg-indigo-600 transition-colors disabled:bg-gray-400">
+                    <svg id="qna-spinner" class="animate-spin h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <span id="qna-btn-text">Ask AI</span>
+                </button>
+            </form>
+            
+            <div id="qna-result" class="mt-4 p-4 bg-indigo-50 rounded-lg hidden">
+                <p class="font-semibold text-indigo-800 mb-1">AI Answer:</p>
+                <div id="qna-answer-output" class="text-gray-700"></div>
+            </div>
+        </section>
+
+
+        <!-- Error Message Box -->
+        <div id="error-box" class="hidden fixed top-5 right-5 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg shadow-xl" role="alert">
+            <strong class="font-bold">Generation Failed!</strong>
+            <span class="block sm:inline" id="error-message">Something went wrong.</span>
+        </div>
+
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        const form = document.getElementById('shop-form');
+        const generateBtn = document.getElementById('generate-btn');
+        const btnText = document.getElementById('btn-text');
+        const spinner = document.getElementById('spinner');
+        const recommendationsSection = document.getElementById('recommendations-section');
+        const recommendationOutput = document.getElementById('recommendation-output');
+        const comparisonSection = document.getElementById('comparison-section');
+        const comparisonOutput = document.getElementById('comparison-output');
+        const personaSection = document.getElementById('persona-section');
+        const personaOutput = document.getElementById('persona-output');
+        const errorBox = document.getElementById('error-box');
+        const errorMessage = document.getElementById('error-message');
+        
+        const priceTrendCard = document.getElementById('price-trend-card');
+        const trendOutput = document.getElementById('trend-output'); 
+        
+        const priceTrackerSection = document.getElementById('price-tracker-section');
+        const priceTrackerOutput = document.getElementById('price-tracker-output');
+
+        const qnaSection = document.getElementById('qna-section');
+        const qnaForm = document.getElementById('qna-form');
+        const qnaQueryInput = document.getElementById('qna-query');
+        const qnaBtn = document.getElementById('qna-btn');
+        const qnaBtnText = document.getElementById('qna-btn-text');
+        const qnaSpinner = document.getElementById('qna-spinner');
+        const qnaResultDiv = document.getElementById('qna-result');
+        const qnaAnswerOutput = document.getElementById('qna-answer-output');
+
+        let currentRecommendationsContext = "";
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault(); 
+            
+            const formData = new FormData(form);
+            const data = {
+                shopping_query: formData.get('shopping_query'),
+                budget: formData.get('budget')
+            };
+
+            // 2. Set loading state
+            generateBtn.disabled = true;
+            btnText.textContent = 'Searching...';
+            spinner.classList.remove('hidden');
+            recommendationsSection.classList.add('hidden');
+            comparisonSection.classList.add('hidden');
+            personaSection.classList.add('hidden');
+            priceTrendCard.classList.add('hidden'); 
+            priceTrackerSection.classList.add('hidden');
+            qnaSection.classList.add('hidden');
+            recommendationOutput.innerHTML = '';
+            comparisonOutput.innerHTML = '';
+            personaOutput.innerHTML = '';
+            trendOutput.innerHTML = '';
+            priceTrackerOutput.innerHTML = '';
+            qnaAnswerOutput.innerHTML = '';
+            qnaResultDiv.classList.add('hidden');
+            errorBox.classList.add('hidden');
+            
+
+            // 3. Send data to Flask backend
+            try {
+                const response = await fetch('/get_recommendations', {
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json(); 
+
+                if (!response.ok) {
+                    throw new Error(result.error || `Server returned status: ${response.status}`);
+                }
+                
+                // Store context for Q&A
+                currentRecommendationsContext = result.recommendations_markdown;
+                
+                // 4. Render the results
+                renderPriceTrend(result.price_trend_markdown);
+                renderRecommendations(result.recommendations_markdown);
+                renderComparison(result.comparison_markdown);
+                renderPersona(result.persona_markdown);
+                renderPriceTracker(result.price_tracker_markdown);
+                
+                recommendationsSection.classList.remove('hidden');
+                comparisonSection.classList.remove('hidden');
+                personaSection.classList.remove('hidden');
+                priceTrackerSection.classList.remove('hidden');
+                qnaSection.classList.remove('hidden');
+
+
+            } catch (error) {
+                // Handle fetch errors (network failure) or JSON parsing errors
+                console.error('Fetch Error:', error);
+                showError(error.message);
+            } finally {
+                // 5. Reset loading state
+                generateBtn.disabled = false;
+                btnText.textContent = 'Find Products (Fast Search)';
+                spinner.classList.add('hidden');
+            }
+        });
+
+        // --- Q&A Handler ---
+        qnaForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const query = qnaQueryInput.value.trim();
+            if (!query) return;
+
+            // Set loading state
+            qnaBtn.disabled = true;
+            qnaBtnText.textContent = 'Thinking...';
+            qnaSpinner.classList.remove('hidden');
+            qnaAnswerOutput.innerHTML = '';
+            qnaResultDiv.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/ask_product_ai', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        context: currentRecommendationsContext,
+                        query: query
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                     throw new Error(result.error || `Server returned status: ${response.status}`);
+                }
+
+                // Render the answer (Markdown)
+                qnaAnswerOutput.innerHTML = marked.parse(result.answer_markdown);
+                
+            } catch (error) {
+                console.error('Q&A Error:', error);
+                qnaAnswerOutput.innerHTML = `<p class="text-red-500">Error: Could not retrieve answer. Check the server log.</p>`;
+            } finally {
+                // Reset Q&A state
+                qnaBtn.disabled = false;
+                qnaBtnText.textContent = 'Ask AI';
+                qnaSpinner.classList.add('hidden');
+            }
+        });
+
+
+        // FINAL FIX: Render Price Tracker now renders Markdown
+        function renderPriceTracker(markdownString) {
+            priceTrackerOutput.innerHTML = '';
+            if (!markdownString || markdownString.includes("Could not find")) {
+                priceTrackerOutput.innerHTML = '<p class="text-gray-500">Could not find a current price breakdown from major retailers.</p>';
+                return;
+            }
+
+            // Render Markdown directly
+            priceTrackerOutput.innerHTML = marked.parse(markdownString);
+        }
+
+
+        function renderPersona(markdownString) {
+            if (markdownString && !markdownString.includes("Unavailable")) {
+                const htmlContent = marked.parse(markdownString);
+                personaOutput.innerHTML = htmlContent;
+                personaSection.classList.remove('hidden');
+            } else {
+                personaSection.classList.add('hidden');
+            }
+        }
+
+        function renderPriceTrend(markdownString) {
+            if (markdownString && !markdownString.includes("unavailable")) {
+                const htmlContent = marked.parse(markdownString);
+                trendOutput.innerHTML = htmlContent;
+                priceTrendCard.classList.remove('hidden');
+            } else {
+                priceTrendCard.classList.remove('hidden');
+                trendOutput.innerHTML = `<p class="font-bold">Price Trend Analysis Unavailable</p><p class="text-sm">Could not access live market data for prediction.</p>`;
+            }
+        }
+
+
+        function renderRecommendations(markdownString) {
+            const htmlContent = marked.parse(markdownString);
+            recommendationOutput.innerHTML = htmlContent;
+        }
+        
+        function renderComparison(markdownString) {
+            if (!markdownString || markdownString.includes("failed")) {
+                comparisonOutput.innerHTML = "<p class='text-gray-600'>AI failed to generate a detailed comparison table. Try refining your initial product search!</p>";
+            } else {
+                comparisonOutput.innerHTML = `<div>${marked.parse(markdownString)}</div>`; 
+            }
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorBox.classList.remove('hidden');
+            setTimeout(() => {
+                errorBox.classList.add('hidden');
+            }, 5001);
+        }
+    </script>
+
+</body>
+</html>
